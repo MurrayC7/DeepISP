@@ -213,8 +213,8 @@ for epoch in range(lastepoch, 4001):
             #     np.float32(np.array(PIL.Image.open(gt_path)) / 65535.), axis=0)
             # TODO: 目前gt rgb图有问题，导致loss收敛但结果有问题，
             #  修改需要读取16bit png 用cv2尝试
-            gt_image_rgb = np.expand_dims(
-                np.float32(cv2.imread(gt_path, cv2.IMREAD_UNCHANGED)[..., ::-1] / 65535.), axis=0)
+        gt_image_rgb = np.expand_dims(
+            np.float32(cv2.imread(gt_path, cv2.IMREAD_UNCHANGED)[..., ::-1] / 65535.), axis=0)
 
         # crop
         H = input_images[str(ratio)[0:3]][ind].shape[1]
