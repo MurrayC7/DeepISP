@@ -216,6 +216,7 @@ for epoch in range(lastepoch, 4001):
         gt_image_rgb = np.expand_dims(
             np.float32(cv2.imread(gt_path, cv2.IMREAD_UNCHANGED)[..., ::-1] / 65535.), axis=0)
 
+
         # crop
         H = input_images[str(ratio)[0:3]][ind].shape[1]
         W = input_images[str(ratio)[0:3]][ind].shape[2]
