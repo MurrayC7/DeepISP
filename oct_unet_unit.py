@@ -1,6 +1,6 @@
 import tensorflow as tf
-from .tf_cnn_basic import *
-from .tf_octConv import *
+from tf_cnn_basic import *
+from tf_octConv import *
 
 
 def Unet_Unit_norm(data, num_in, num_mid, num_out, name, first_block=False, stride=(1, 1), g=1):

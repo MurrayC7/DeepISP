@@ -10,16 +10,18 @@ import tensorflow as tf
 tf.set_random_seed(819)
 import tensorflow.contrib.slim as slim
 import numpy as np
+
 np.random.seed(819)
 # import rawpy
 import glob
 
 from loss import *
+from octconv_unet import oct_unet
 
 input_dir = '../../datasets/SID/Sony/short/'
 gt_dir = '../../datasets/SID/Sony/gt/'  # use rgb gt instead of raw
-checkpoint_dir = './checkpoint/Sony/'
-result_dir = './result_Sony/'
+checkpoint_dir = './checkpoint/Sony_oct/'
+result_dir = './result_Sony_oct/'
 if not os.path.exists(checkpoint_dir):
     os.mkdir(checkpoint_dir)
 if not os.path.exists(result_dir):
@@ -29,6 +31,7 @@ if not os.path.exists(result_dir):
 train_fns = glob.glob(gt_dir + '0*.png')
 train_ids = [int(os.path.basename(train_fn)[0:5]) for train_fn in train_fns]
 
+alpha = 0.25  # octave conv 'alpha' param
 ps = 512  # patch size for training
 lmd = 0.5  # l1 and perceptual loss weight
 save_freq = 500
@@ -121,7 +124,7 @@ sess = tf.Session(config=config,
 
 in_image = tf.placeholder(tf.float32, [None, None, None, 4])
 gt_image = tf.placeholder(tf.float32, [None, None, None, 3])
-out_image = network(in_image)
+out_image = oct_unet(in_image, alpha)
 # 测试的时候才看metric，训练的时候没有意义
 # psnr = tf.reduce_mean(tf.image.psnr(out_image, gt_image, max_val=1.0), axis=0)
 # ssim = tf.reduce_mean(tf.image.ssim(out_image, gt_image, max_val=1.0), axis=0)
@@ -216,7 +219,6 @@ for epoch in range(lastepoch, 4001):
             #  修改需要读取16bit png 用cv2尝试
         gt_image_rgb = np.expand_dims(
             np.float32(cv2.imread(gt_path, cv2.IMREAD_UNCHANGED)[..., ::-1] / 65535.), axis=0)
-
 
         # crop
         H = input_images[str(ratio)[0:3]][ind].shape[1]

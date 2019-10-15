@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
-from .tf_octConv import *
-from .tf_cnn_basic import *
-from .oct_unet_unit import *
+from tf_octConv import *
+from tf_cnn_basic import *
+from oct_unet_unit import *
 
 G = 1
 alpha = 0.25
@@ -55,7 +55,9 @@ def network(input):
 def upsample_and_concat(x1, x2, output_channels, in_channels):
     pool_size = 2
     deconv_filter = tf.Variable(tf.truncated_normal([pool_size, pool_size, output_channels, in_channels], stddev=0.02))
-    deconv = tf.nn.conv2d_transpose(x1, deconv_filter, tf.shape(x2), strides=[1, pool_size, pool_size, 1])
+
+    deconv = tf.nn.conv2d_transpose(x1, deconv_filter, tf.shape(x2), strides=[1, pool_size, pool_size, 1]
+                                    )  # Ref to https://github.com/tensorflow/tensorflow/issues/20334
 
     deconv_output = tf.concat([deconv, x2], 3)
     deconv_output.set_shape([None, None, None, output_channels * 2])
@@ -111,59 +113,59 @@ def oct_unet(input, alpha=0.25):
 
     # conv5
     conv5_hf, conv5_lf = octConv_BN_AC(hf_data=pool4_hf, lf_data=pool4_lf, alpha=alpha, num_filter_in=512,
-                                       num_filter_out=512,
+                                       num_filter_out=1024,
                                        kernel=(3, 3),
                                        name='g_conv5_1', pad='same')
-    conv5_hf, conv5_lf = octConv_BN_AC(hf_data=conv5_hf, lf_data=conv5_lf, alpha=alpha, num_filter_in=512,
-                                       num_filter_out=512,
+    conv5_hf, conv5_lf = octConv_BN_AC(hf_data=conv5_hf, lf_data=conv5_lf, alpha=alpha, num_filter_in=1024,
+                                       num_filter_out=1024,
                                        kernel=(3, 3), name='g_conv5_2', pad='same')
 
-    up6_hf = upsample_and_concat(conv5_hf, conv4_hf, 256, 512)
-    up6_lf = upsample_and_concat(conv5_lf, conv4_lf, 256, 512)
+    up6_hf = upsample_and_concat(conv5_hf, conv4_hf, 384, 768)
+    up6_lf = upsample_and_concat(conv5_lf, conv4_lf, 128, 256)
     # conv6
-    conv6_hf, conv6_lf = octConv_BN_AC(hf_data=up6_hf, lf_data=up6_lf, alpha=alpha, num_filter_in=512,
-                                       num_filter_out=256,
+    conv6_hf, conv6_lf = octConv_BN_AC(hf_data=up6_hf, lf_data=up6_lf, alpha=alpha, num_filter_in=1024,
+                                       num_filter_out=512,
                                        kernel=(3, 3),
                                        name='g_conv6_1', pad='same')
-    conv6_hf, conv6_lf = octConv_BN_AC(hf_data=conv6_hf, lf_data=conv6_lf, alpha=alpha, num_filter_in=256,
-                                       num_filter_out=256,
+    conv6_hf, conv6_lf = octConv_BN_AC(hf_data=conv6_hf, lf_data=conv6_lf, alpha=alpha, num_filter_in=512,
+                                       num_filter_out=512,
                                        kernel=(3, 3), name='g_conv6_2', pad='same')
 
-    up7_hf = upsample_and_concat(conv6_hf, conv3_hf, 128, 256)
-    up7_lf = upsample_and_concat(conv6_lf, conv3_lf, 128, 256)
+    up7_hf = upsample_and_concat(conv6_hf, conv3_hf, 192, 384)
+    up7_lf = upsample_and_concat(conv6_lf, conv3_lf, 64, 128)
     # conv7
-    conv7_hf, conv7_lf = octConv_BN_AC(hf_data=up7_hf, lf_data=up7_lf, alpha=alpha, num_filter_in=256,
-                                       num_filter_out=128,
+    conv7_hf, conv7_lf = octConv_BN_AC(hf_data=up7_hf, lf_data=up7_lf, alpha=alpha, num_filter_in=512,
+                                       num_filter_out=256,
                                        kernel=(3, 3),
                                        name='g_conv7_1', pad='same')
-    conv7_hf, conv7_lf = octConv_BN_AC(hf_data=conv7_hf, lf_data=conv7_lf, alpha=alpha, num_filter_in=128,
-                                       num_filter_out=128,
+    conv7_hf, conv7_lf = octConv_BN_AC(hf_data=conv7_hf, lf_data=conv7_lf, alpha=alpha, num_filter_in=256,
+                                       num_filter_out=256,
                                        kernel=(3, 3), name='g_conv7_2', pad='same')
 
-    up8_hf = upsample_and_concat(conv7_hf, conv2_hf, 64, 128)
-    up8_lf = upsample_and_concat(conv7_lf, conv2_lf, 64, 128)
+    up8_hf = upsample_and_concat(conv7_hf, conv2_hf, 96, 192)
+    up8_lf = upsample_and_concat(conv7_lf, conv2_lf, 32, 64)
     # conv8
-    conv8_hf, conv8_lf = octConv_BN_AC(hf_data=up8_hf, lf_data=up8_lf, alpha=alpha, num_filter_in=128,
-                                       num_filter_out=64,
+    conv8_hf, conv8_lf = octConv_BN_AC(hf_data=up8_hf, lf_data=up8_lf, alpha=alpha, num_filter_in=256,
+                                       num_filter_out=128,
                                        kernel=(3, 3),
                                        name='g_conv8_1', pad='same')
-    conv8_hf, conv8_lf = octConv_BN_AC(hf_data=conv8_hf, lf_data=conv8_lf, alpha=alpha, num_filter_in=64,
-                                       num_filter_out=64,
+    conv8_hf, conv8_lf = octConv_BN_AC(hf_data=conv8_hf, lf_data=conv8_lf, alpha=alpha, num_filter_in=128,
+                                       num_filter_out=128,
                                        kernel=(3, 3), name='g_conv8_2', pad='same')
 
-    up9_hf = upsample_and_concat(conv8_hf, conv1_hf, 32, 64)
-    up9_lf = upsample_and_concat(conv8_lf, conv1_lf, 32, 64)
+    up9_hf = upsample_and_concat(conv8_hf, conv1_hf, 48, 96)
+    up9_lf = upsample_and_concat(conv8_lf, conv1_lf, 16, 32)
     # conv9
-    conv9_hf, conv9_lf = octConv_BN_AC(hf_data=up9_hf, lf_data=up9_lf, alpha=alpha, num_filter_in=64,
-                                       num_filter_out=32,
+    conv9_hf, conv9_lf = octConv_BN_AC(hf_data=up9_hf, lf_data=up9_lf, alpha=alpha, num_filter_in=128,
+                                       num_filter_out=64,
                                        kernel=(3, 3),
                                        name='g_conv9_1', pad='same')
-    conv9_hf, conv9_lf = octConv_BN_AC(hf_data=conv9_hf, lf_data=conv9_lf, alpha=alpha, num_filter_in=32,
-                                       num_filter_out=32,
+    conv9_hf, conv9_lf = octConv_BN_AC(hf_data=conv9_hf, lf_data=conv9_lf, alpha=alpha, num_filter_in=64,
+                                       num_filter_out=64,
                                        kernel=(3, 3), name='g_conv9_2', pad='same')
 
     # conv10
-    conv10 = lastOctConv_BN(hf_data=conv9_hf, lf_data=conv9_lf, alpha=alpha, num_filter_in=32,
+    conv10 = lastOctConv_BN(hf_data=conv9_hf, lf_data=conv9_lf, alpha=alpha, num_filter_in=64,
                             num_filter_out=12,
                             kernel=(1, 1),
                             name='g_conv10', pad='same')

@@ -7,7 +7,7 @@ def BN(data, bn_momentum=0.9, name=None):
 
 def AC(data, name=None):
     # return tf.nn.relu(data, name=('%s__relu' % name))
-    return tf.nn.leaky_relu(data, name=('%s__relu' % name))
+    return tf.nn.leaky_relu(data, name=('%s__lrelu' % name))
 
 
 def BN_AC(data, momentum=0.9, name=None):

@@ -10,6 +10,7 @@ import tensorflow as tf
 tf.set_random_seed(819)
 import tensorflow.contrib.slim as slim
 import numpy as np
+np.random.seed(819)
 # import rawpy
 import glob
 
@@ -186,7 +187,7 @@ for epoch in range(lastepoch, 4001):
     if epoch > 2000:
         learning_rate = 1e-5
 
-    for ind in np.random.permutation(int(len(train_ids) / 4)):
+    for ind in np.random.permutation(int(len(train_ids) / 15)):
         # get the path from image id
         train_id = train_ids[ind]
         print(train_id)
@@ -235,9 +236,9 @@ for epoch in range(lastepoch, 4001):
         # gt_patch = gt_images[ind][:, yy * 2:yy * 2 + ps * 2, xx * 2:xx * 2 + ps * 2, :]
         gt_patch = gt_image_rgb[:, yy * 2:yy * 2 + ps * 2, xx * 2:xx * 2 + ps * 2, :]
 
-        print('**in,gt shape: ',
-              sess.run(tf.shape(input_patch)),
-              sess.run(tf.shape(gt_patch)))
+        # print('**in,gt shape: ',
+        #       sess.run(tf.shape(input_patch)),
+        #       sess.run(tf.shape(gt_patch)))
         if np.random.randint(2, size=1)[0] == 1:  # random flip
             input_patch = np.flip(input_patch, axis=1)
             gt_patch = np.flip(gt_patch, axis=1)
@@ -256,7 +257,7 @@ for epoch in range(lastepoch, 4001):
                                                             lr: learning_rate})
         output = np.minimum(np.maximum(output, 0), 1)
 
-        print('**output shape', sess.run(tf.shape(output)))
+        # print('**output shape', sess.run(tf.shape(output)))
         g_loss[ind] = G_current
         # if cnt % 20 == 0:
         train_writer.add_summary(summary, cnt)
