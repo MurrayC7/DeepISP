@@ -31,6 +31,10 @@ def lastOctConv(hf_data, lf_data, settings, ch_in, ch_out, name, kernel=(1,1), p
     hf_conv = Conv(data=hf_data, num_filter=hf_ch_out, kernel=kernel, pad=pad, stride=(1,1), name=('%s_hf_conv' % name))
 
     lf_conv = Conv(data=lf_data, num_filter=hf_ch_out, kernel=kernel, pad=pad, stride=(1,1), name=('%s_lf_conv' % name))
+
+    # bug fixed
+    lf_conv = UpSampling(lf_conv, scale=2, sample_type='nearest',num_args=1, name='%s_lf_upsample' % name)
+
     out_h = hf_conv + lf_conv
 
     return out_h

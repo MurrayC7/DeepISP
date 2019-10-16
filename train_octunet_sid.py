@@ -229,6 +229,7 @@ for epoch in range(lastepoch, 4001):
         input_patch = input_images[str(ratio)[0:3]][ind][:, yy:yy + ps, xx:xx + ps, :]
         # gt_patch = gt_images[ind][:, yy * 2:yy * 2 + ps * 2, xx * 2:xx * 2 + ps * 2, :]
         gt_patch = gt_image_rgb[:, yy * 2:yy * 2 + ps * 2, xx * 2:xx * 2 + ps * 2, :]
+        # gt_patch = gt_image_rgb[:, yy * 2:yy * 2 + ps, xx * 2:xx * 2 + ps, :]
 
         if np.random.randint(2, size=1)[0] == 1:  # random flip
             input_patch = np.flip(input_patch, axis=1)

@@ -167,8 +167,10 @@ def oct_unet(input, alpha=0.25):
     # conv10
     conv10 = lastOctConv_BN(hf_data=conv9_hf, lf_data=conv9_lf, alpha=alpha, num_filter_in=64,
                             num_filter_out=12,
-                            kernel=(1, 1),
+                            kernel=(1, 1), stride=(2, 2),
                             name='g_conv10', pad='same')
+    # filter = tf.Variable(tf.truncated_normal([2, 2, 12, 12], stddev=0.02))
+    # conv10_up = tf.nn.conv2d_transpose(conv10, filter, [1, 12, 512, 512], strides=[1, 2, 2, 1])
     out = tf.depth_to_space(conv10, 2)
     return out
 
