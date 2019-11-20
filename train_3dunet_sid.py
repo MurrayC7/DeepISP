@@ -17,11 +17,14 @@ import glob
 
 from loss import *
 from octconv_unet import oct_unet
+from model import UNet3D
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 input_dir = '../../datasets/SID/Sony/short/'
 gt_dir = '../../datasets/SID/Sony/gt/'  # use rgb gt instead of raw
-checkpoint_dir = './checkpoint/Sony_oct_ssim/'
-result_dir = './result_Sony_oct_ssim/'
+checkpoint_dir = './checkpoint/Sony_3d/'
+result_dir = './result_Sony_3d/'
 if not os.path.exists(checkpoint_dir):
     os.mkdir(checkpoint_dir)
 if not os.path.exists(result_dir):
@@ -32,7 +35,7 @@ train_fns = glob.glob(gt_dir + '0*.png')
 train_ids = [int(os.path.basename(train_fn)[0:5]) for train_fn in train_fns]
 
 alpha = 0.25  # octave conv 'alpha' param
-ps = 512  # patch size for training
+ps = 128  # patch size for training
 lmd = 0.5  # l1 and perceptual loss weight
 save_freq = 500
 
@@ -66,7 +69,9 @@ sess = tf.Session(config=config)
 
 in_image = tf.placeholder(tf.float32, [None, None, None, 4])
 gt_image = tf.placeholder(tf.float32, [None, None, None, 3])
-out_image = oct_unet(in_image, alpha)
+# out_image = oct_unet(in_image, alpha)
+net = UNet3D()
+out_image = net.construct_model(in_image)
 # 测试的时候才看metric，训练的时候没有意义
 # psnr = tf.reduce_mean(tf.image.psnr(out_image, gt_image, max_val=1.0), axis=0)
 # ssim = tf.reduce_mean(tf.image.ssim(out_image, gt_image, max_val=1.0), axis=0)
@@ -74,23 +79,23 @@ out_image = oct_unet(in_image, alpha)
 # tf.summary.image('psnr', psnr)
 # tf.summary.image('ssim', ssim)
 
-G_l1loss = tf.reduce_mean(tf.abs(out_image - gt_image))
-G_msssimloss = tf.reduce_mean(1 - tf.image.ssim_multiscale(out_image, gt_image, 1.0))
+G_loss = tf.reduce_mean(tf.abs(out_image - gt_image))
+# G_msssimloss = 255 * (1 - tf.image.ssim_multiscale(out_image, gt_image, 1.0))
 # G_l1loss = tf.reduce_mean(compute_l1_loss(out_image, gt_image))
 # features = ["conv1_2", "conv2_2", "conv3_2"]
 # G_perceploss = tf.reduce_mean(compute_percep_loss(gt_image, out_image, features, withl1=False))
-G_loss = lmd * G_l1loss + (1 - lmd) * G_msssimloss
-tf.summary.scalar('l1loss', G_l1loss)
-tf.summary.scalar('msssimloss', G_msssimloss)
+# G_loss = lmd * G_l1loss + (1 - lmd) * G_msssimloss
+# tf.summary.scalar('l1loss', G_l1loss)
+# tf.summary.scalar('perceploss', G_perceploss)
 tf.summary.scalar('sum_loss', G_loss)
 
 t_vars = tf.trainable_variables()
 # global_step = tf.Variable(tf.constant(0), trainable=False)
 lr = tf.placeholder(tf.float32)
 tf.summary.scalar('lr', lr)
-
-# start_lr = 5e-4
-# lr = tf.train.exponential_decay(start_lr, global_step, 1000, 0.9, staircase=True)
+learning_rate = 1e-4
+# start_lr = 1e-3
+# lr = tf.train.exponential_decay(start_lr, global_step, 3000, 0.9, staircase=True)
 # tf.summary.scalar('lr', lr)
 
 with tf.variable_scope(tf.get_variable_scope(), reuse=tf.AUTO_REUSE):
@@ -123,13 +128,10 @@ g_loss = np.zeros((5000, 1))
 
 allfolders = glob.glob(result_dir + '*0')
 lastepoch = 0
-cnt = 0
 for folder in allfolders:
     lastepoch = np.maximum(lastepoch, int(folder[-4:]))
 
-cnt = lastepoch * len(train_ids)
-learning_rate = 1e-4
-
+cnt = 0
 for epoch in range(lastepoch, 4001):
     if os.path.isdir(result_dir + '%04d' % epoch):
         continue
@@ -202,8 +204,11 @@ for epoch in range(lastepoch, 4001):
 
         summary, _, G_current, output = sess.run([merged, G_opt, G_loss, out_image],
                                                  feed_dict={in_image: input_patch, gt_image: gt_patch,
-                                                            lr: learning_rate})
+                                                            lr: learning_rate,
+                                                            net.is_training: True})
         output = np.minimum(np.maximum(output, 0), 1)
+        # print(gt_patch.shape, output.shape)
+
         g_loss[ind] = G_current
         # if cnt % 20 == 0:
         train_writer.add_summary(summary, cnt)
@@ -212,7 +217,6 @@ for epoch in range(lastepoch, 4001):
         if epoch % save_freq == 0:
             if not os.path.isdir(result_dir + '%04d' % epoch):
                 os.makedirs(result_dir + '%04d' % epoch)
-
             temp = np.concatenate((gt_patch[0, :, :, :], output[0, :, :, :]), axis=1)
             # PIL.Image.fromarray((temp * 255).astype('uint8')).convert('RGB').save(
             #     result_dir + '%04d/%05d_00_train_%d_pil.jpg' % (epoch, train_id, ratio))

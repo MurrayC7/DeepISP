@@ -7,9 +7,6 @@ import numpy as np
 import tensorflow as tf
 import scipy.io
 
-vgg_rawnet = scipy.io.loadmat('../../datasets/pretrain-features/imagenet-vgg-verydeep-19.mat')
-print("Loaded vgg19 pretrained imagenet")
-
 
 # 1xWxHx3
 def learn_align(prediction, target, tar_w, tar_h):
@@ -38,6 +35,8 @@ def get_weight_bias(vgg_layers, i):
 
 
 def build_vgg19(input, features='conv1_2', reuse=False):
+    vgg_rawnet = scipy.io.loadmat('../../datasets/pretrain-features/imagenet-vgg-verydeep-19.mat')
+    print("Loaded vgg19 pretrained imagenet")
     if reuse:
         tf.get_variable_scope().reuse_variables()
     net = {}

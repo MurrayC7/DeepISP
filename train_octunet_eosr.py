@@ -20,10 +20,10 @@ import glob
 from loss import *
 from octconv_unet import oct_unet
 
-input_dir = '../../datasets/raw/fivek_dataset/raw_photos/HQa1to5000/'
-gt_dir = '../../datasets/raw/fivek_dataset/fivek_c/'
-checkpoint_dir = './checkpoint/fivec_oct/'
-result_dir = './result_fivec_oct/'
+input_dir = '../../datasets/raw/eosr/train/raw_input/'
+gt_dir = '../../datasets/raw/eosr/train/gt/'
+checkpoint_dir = './checkpoint/eosr_oct_5lr/'
+result_dir = './result_eosr_oct_5lr/'
 
 if not os.path.exists(checkpoint_dir):
     os.mkdir(checkpoint_dir)
@@ -31,9 +31,9 @@ if not os.path.exists(result_dir):
     os.mkdir(result_dir)
 
 # get train IDs
-train_fns = glob.glob(gt_dir + '*.tif')
+train_fns = glob.glob(gt_dir + '*.JPG')
 train_ids = [os.path.basename(train_fn)[0:-4] for train_fn in train_fns]
-train_ids = train_ids[:int(len(train_ids) / 5)]
+# train_ids = train_ids[:int(len(train_ids) / 5)]
 
 alpha = 0.25  # octave conv 'alpha' param
 ps = 512  # patch size for training
@@ -48,7 +48,16 @@ if DEBUG == 1:
 
 def pack_raw(raw):
     # pack Bayer image to 4 channels
-    im = raw.raw_image_visible.astype(np.float32)
+    im = raw.raw_image.astype(np.float32)
+
+    ### Crop the border
+    # Sensor Width                    : 6888
+    # Sensor Height                   : 4546
+    # Sensor Left Border              : 156
+    # Sensor Top Border               : 58
+    # Sensor Right Border             : 6875
+    # Sensor Bottom Border            : 4537
+    im = im[57:4537, 155:6875]
     # im = np.maximum(im - 512, 0) / (16383 - 512)  # subtract the black level
     black_level = raw.black_level_per_channel[0]
     im = np.maximum(im - black_level, 0) / (np.max(raw.raw_image) - black_level)
@@ -90,14 +99,15 @@ gt_image = tf.placeholder(tf.float32, [None, None, None, 3])
 out_image = oct_unet(in_image, alpha)
 
 G_l1loss = tf.reduce_mean(tf.abs(out_image - gt_image))
-G_msssimloss = tf.reduce_mean(1 - tf.image.ssim_multiscale(out_image, gt_image, 1.0))
+#G_msssimloss = tf.reduce_mean(1 - tf.image.ssim_multiscale(out_image, gt_image, 1.0))
 # G_l1loss = tf.reduce_mean(compute_l1_loss(out_image, gt_image))
 # features = ["conv1_2", "conv2_2", "conv3_2"]
 # G_perceploss = tf.reduce_mean(compute_percep_loss(gt_image, out_image, features, withl1=False))
-G_loss = lmd * G_l1loss + (1 - lmd) * G_msssimloss
-tf.summary.scalar('l1loss', G_l1loss)
-tf.summary.scalar('msssimloss', G_msssimloss)
-tf.summary.scalar('sum_loss', G_loss)
+#G_loss = lmd * G_l1loss + (1 - lmd) * G_msssimloss
+G_loss = G_l1loss
+tf.summary.scalar('l1loss', G_loss)
+#tf.summary.scalar('msssimloss', G_msssimloss)
+#tf.summary.scalar('sum_loss', G_loss)
 
 t_vars = tf.trainable_variables()
 lr = tf.placeholder(tf.float32)
@@ -137,13 +147,15 @@ lastepoch = 0
 for folder in allfolders:
     lastepoch = np.maximum(lastepoch, int(folder[-4:]))
 
-learning_rate = 1e-4
+learning_rate = 5e-4
 cnt = 0
 for epoch in range(lastepoch, 4001):
     if os.path.isdir(result_dir + '%04d' % epoch):
         continue
     # cnt = 0
-    if epoch > 2000:
+    if epoch > 1500:
+        learning_rate = 1e-4
+    elif epoch > 2500:
         learning_rate = 1e-5
 
     for ind in np.random.permutation(len(train_ids)):
@@ -155,7 +167,7 @@ for epoch in range(lastepoch, 4001):
         in_path = in_files[0]
         # in_fn = os.path.basename(in_path)
         # TODO: batch批量读取raw图
-        gt_files = glob.glob(gt_dir + '%s.tif' % train_id)
+        gt_files = glob.glob(gt_dir + '%s.JPG' % train_id)
         gt_path = gt_files[0]
         # gt_fn = os.path.basename(gt_path)
         # in_exposure = float(in_fn[9:-5])
@@ -188,8 +200,8 @@ for epoch in range(lastepoch, 4001):
             # im = raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=16)
             # gt_images[ind] = np.expand_dims(np.float32(im / 65535.0), axis=0)
             gt_images[ind] = np.expand_dims(
-               np.float32(cv2.resize(
-                   cv2.imread(gt_path, cv2.IMREAD_UNCHANGED)[..., ::-1], (W * 2, H * 2)) / 65535.), axis=0)
+                np.float32(cv2.resize(
+                    cv2.imread(gt_path, cv2.IMREAD_UNCHANGED)[..., ::-1], (W * 2, H * 2)) / 255.), axis=0)
             print("time gt: ", time.time() - st)
         # crop
         # print('**input,gt image shape: ', (H, W), gt_images[ind].shape)
