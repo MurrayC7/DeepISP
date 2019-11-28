@@ -16,13 +16,13 @@ import glob
 
 from octconv_unet import oct_unet
 
-input_dir = '../../datasets/raw/eosr/val/'
-gt_dir = '../../datasets/raw/eosr/val/'
-checkpoint_dir = './checkpoint/eosr_oct/'
-result_dir = './result_eosr_oct/'
+input_dir = '../../datasets/raw/eosr/test/gt/'
+gt_dir = '../../datasets/raw/eosr/test/gt/'
+checkpoint_dir = './checkpoint/eosr_oct_dire/'
+result_dir = './result_eosr_oct_dire/'
 
 # get test IDs
-test_fns = glob.glob(gt_dir + '*.JPG')
+test_fns = glob.glob(input_dir + '*.dng')
 test_ids = [os.path.basename(test_fn)[0:-4] for test_fn in test_fns]
 
 ps = 1024

@@ -20,10 +20,10 @@ import glob
 from loss import *
 from octconv_unet import oct_unet
 
-input_dir = '../../datasets/raw/eosr/train/raw_input/'
-gt_dir = '../../datasets/raw/eosr/train/gt/'
-checkpoint_dir = './checkpoint/eosr_oct_5lr/'
-result_dir = './result_eosr_oct_5lr/'
+input_dir = '../../datasets/raw/eosr/train/'
+gt_dir = '../../datasets/raw/eosr/train/'
+checkpoint_dir = './checkpoint/eosr_oct_fuse/'
+result_dir = './result_eosr_oct_fuse/'
 
 if not os.path.exists(checkpoint_dir):
     os.mkdir(checkpoint_dir)
@@ -33,7 +33,8 @@ if not os.path.exists(result_dir):
 # get train IDs
 train_fns = glob.glob(gt_dir + '*.JPG')
 train_ids = [os.path.basename(train_fn)[0:-4] for train_fn in train_fns]
-# train_ids = train_ids[:int(len(train_ids) / 5)]
+np.random.shuffle(train_ids)
+train_ids = train_ids[:int(len(train_ids) / 2)]
 
 alpha = 0.25  # octave conv 'alpha' param
 ps = 512  # patch size for training
@@ -147,15 +148,15 @@ lastepoch = 0
 for folder in allfolders:
     lastepoch = np.maximum(lastepoch, int(folder[-4:]))
 
-learning_rate = 5e-4
+learning_rate = 1e-4
 cnt = 0
 for epoch in range(lastepoch, 4001):
     if os.path.isdir(result_dir + '%04d' % epoch):
         continue
     # cnt = 0
-    if epoch > 1500:
-        learning_rate = 1e-4
-    elif epoch > 2500:
+    #if epoch > 1500:
+    #    learning_rate = 1e-4
+    if epoch > 2000:
         learning_rate = 1e-5
 
     for ind in np.random.permutation(len(train_ids)):
